@@ -1,6 +1,6 @@
 // server.js
 const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
+const { ApolloServer } = require('apollo-server-express');
 const mongoose = require('mongoose');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { readFileSync } = require('fs');
@@ -18,16 +18,26 @@ mongoose.connect('mongodb://localhost:27017/graphql-mongoose-demo', {
 const typeDefs = readFileSync('./schema.graphql', 'utf-8');
 const schema = makeExecutableSchema({ typeDefs, resolvers });
 
-app.use(
-    '/graphql',
-    graphqlHTTP({
-        schema: schema,
-        graphiql: true,
-    })
-);
+// Create an instance of ApolloServer
+const server = new ApolloServer({
+    schema,
+    context: ({ req }) => ({ req }),
+    introspection: true,
+    playground: true,
+});
 
-const PORT = process.env.PORT || 3000;
+async function startApolloServer() {
+    await server.start();
+    server.applyMiddleware({ app });
+}
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.get('/', (req, res) => {
+    res.send('Welcome to GraphQL server');
+});
+
+startApolloServer().then(() => {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
 });
